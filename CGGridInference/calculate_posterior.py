@@ -7,9 +7,9 @@ class CGGridInference:
         self.model_line_labels = model_line_labels
         self.data_luminosity_values = np.array([])
         self.data_line_labels = np.array([])
-        self.prior = np.ones(self.model_luminosity_values.shape[-1])/np.sum(np.ones(self.model_luminosity_values.shape[-1]))
-        self.likelihood
-        self.posterior
+        self.prior = np.ones(self.model_luminosity_values.shape[-1]) / np.sum(np.ones(self.model_luminosity_values.shape[-1]))
+        self.likelihood = np.ones(self.model_luminosity_values.shape[-1]) * np.nan
+        self.posterior = = np.ones(self.model_luminosity_values.shape[-1]) * np.nan
 
     def normalize_model(self, line_label):
         return normalized_model
