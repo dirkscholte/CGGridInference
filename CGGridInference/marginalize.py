@@ -10,19 +10,23 @@ class Marginalize:
 
     def get_parameter_index(self, parameter_label):
         if np.isscalar(parameter_label) and isinstance(parameter_label, str):
-            index = self.parameter_labels.get(parameter_label)
-        elif np.isscalar(parameter_label) and isinstance(parameter_label, int):
-            index = parameter_label
-        elif np.isscalar(parameter_label) and ~isinstance(parameter_label, str) and ~isinstance(parameter_label, int):
-            index = np.nan
-        elif ~np.isscalar(parameter_label):
-            index = np.ones((len(parameter_label))) * np.nan
-            for i in range(len(parameter_label)):
-                if isinstance(parameter_label[i], str):
-                    index[i] = self.parameter_labels.get(parameter_label)
-                elif isinstance(parameter_label[i], int):
-                    index[i] = parameter_label[i]
-        return index
+            return int(self.parameter_labels.get(parameter_label))
+        elif np.isscalar(parameter_label) and ~isinstance(parameter_label, str):
+            return int(parameter_label)
+        else:
+            if len(parameter_label)==1:
+                if isinstance(parameter_label[0], str):
+                    return int(self.parameter_labels.get(parameter_label[0]))
+                else:
+                    return int(parameter_label[0])
+            else:
+                index = np.ones((len(parameter_label))) * np.nan
+                for i in range(len(parameter_label)):
+                    if isinstance(parameter_label[i], str):
+                        index[i] = self.parameter_labels.get(parameter_label)
+                    elif ~isinstance(parameter_label[i], str):
+                        index[i] = parameter_label[i]
+                return index
 
     def parameter_bin_mids(self, parameter_label):
         parameter_index = self.get_parameter_index(parameter_label)
@@ -59,8 +63,10 @@ class Marginalize:
     def parameter_percentile(self, parameter_label, percentile):
         parameter_index = self.get_parameter_index(parameter_label)
         bin_edges = self.parameter_bin_edges(parameter_index)
-        parameters_to_marginalize = tuple(np.delete(np.arange(self.n_parameters), parameter_index))
+        parameters_to_marginalize = np.delete(np.arange(self.n_parameters), parameter_index)
+        print()
         marginalized = self.marginalize(parameters_to_marginalize)
+        print(marginalized.shape, bin_edges.shape)
         return self.histogram_cdf_inverse(percentile, marginalized, bin_edges)
 
     def derived_parameter_percentile(self, derived_parameter_values, bin_edges, percentile):
