@@ -23,9 +23,10 @@ class Marginalize:
                 index = np.ones((len(parameter_label))) * np.nan
                 for i in range(len(parameter_label)):
                     if isinstance(parameter_label[i], str):
-                        index[i] = self.parameter_labels.get(parameter_label)
+                        index[i] = self.parameter_labels.get(parameter_label[i])
                     elif ~isinstance(parameter_label[i], str):
                         index[i] = parameter_label[i]
+                index = tuple(np.array(index, dtype=int))
                 return index
 
     def parameter_bin_mids(self, parameter_label):
@@ -47,15 +48,15 @@ class Marginalize:
         histogram, _ = np.histogram(derived_parameter_values, weights=self.prob_dist, bins=bin_edges)
         return histogram
 
-    def histogram_cdf_inverse(self, percentile, bin_height, bin_edges):
+    def histogram_cdf_inverse(self, quantile, bin_height, bin_edges):
         bin_width = bin_edges[1:] - bin_edges[:-1]
         bin_height = bin_height / np.sum(bin_height * bin_width)
         cumulative = np.cumsum(bin_height * bin_width)
-        last_bin = np.sum([cumulative <= percentile])
+        last_bin = np.sum([cumulative <= quantile])
         if last_bin == 0:
-            remainder = percentile
+            remainder = quantile
         else:
-            remainder = percentile - cumulative[last_bin - 1]
+            remainder = quantile - cumulative[last_bin - 1]
         frac_bin = remainder / (bin_height[last_bin] * (bin_width[last_bin]))
         cdf_inverse = bin_edges[0] + np.sum(bin_width[:last_bin]) + frac_bin * bin_width[last_bin]
         return cdf_inverse
@@ -64,10 +65,8 @@ class Marginalize:
         parameter_index = self.get_parameter_index(parameter_label)
         bin_edges = self.parameter_bin_edges(parameter_index)
         parameters_to_marginalize = np.delete(np.arange(self.n_parameters), parameter_index)
-        print()
         marginalized = self.marginalize(parameters_to_marginalize)
-        print(marginalized.shape, bin_edges.shape)
-        return self.histogram_cdf_inverse(percentile, marginalized, bin_edges)
+        return self.histogram_cdf_inverse(percentile/100., marginalized, bin_edges)
 
     def derived_parameter_percentile(self, derived_parameter_values, bin_edges, percentile):
         marginalized = self.marginalize_derived_parameter(derived_parameter_values, bin_edges)
