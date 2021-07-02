@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+from calculate_posterior import CalculatePosterior
 from marginalize import Marginalize
 
 class CornerPlot:
@@ -84,3 +85,83 @@ class CornerPlot:
             plt.savefig(self.savename)
         else:
             plt.show()
+
+class LineFitPlot:
+    def __init__(self, parameter_values, parameter_labels, model_flux_values, model_line_labels, data_flux_values, data_flux_errors, data_line_labels, show_line_labels, normalize_label, save=False, savename='cornerplot.pdf'):
+        self.parameter_values = parameter_values
+        self.n_parameters = len(parameter_values.shape) - 1
+        self.parameter_labels = parameter_labels
+        self.model_flux_values = model_flux_values
+        self.model_line_labels = dict(zip(model_line_labels, range(len(model_line_labels))))
+        self.data_flux_values = data_flux_values
+        self.data_flux_errors = data_flux_errors
+        self.data_line_labels = data_line_labels
+        self.show_line_labels = show_line_labels
+        self.normalize_label = normalize_label
+        self.save = save
+        self.savename = savename
+
+        self.calc_post = CalculatePosterior(self.model_flux_values, model_line_labels)
+        self.calc_post.normalize_model(self.normalize_label)
+        self.calc_post.input_data(self.data_flux_values, self.data_flux_errors, self.data_line_labels)
+        self.calc_post.normalize_data(self.normalize_label)
+        self.calc_post.calculate_likelihood()
+        self.calc_post.calculate_posterior()
+        self.posterior = self.calc_post.posterior
+
+        self.marg = Marginalize(self.parameter_values, self.parameter_labels, self.posterior)
+
+    def plot(self):
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        for i in range(len(self.show_line_labels)):
+            model_flux = np.take(self.calc_post.model_flux_values, self.model_line_labels.get(self.show_line_labels[i]), axis=-1)
+            pos = ax.scatter(np.random.uniform(low=0.1, high=0.9, size=model_flux.shape) + i,
+                             model_flux,
+                             alpha=0.4,
+                             s=1000 * self.posterior.reshape(-1) / np.max(self.posterior.reshape(-1)) + 0.3,
+                             c='blue',
+                             edgecolor='none',
+                             #vmin=np.min(cbar_vals),
+                             #vmax=np.max(cbar_vals),
+                             cmap='turbo')
+            if i == 0:
+                ymin = np.min(model_flux)
+                ymax = np.min(model_flux)
+            if ymin > np.min(model_flux):
+                ymin = np.min(model_flux)
+            if ymax < np.max(model_flux):
+                ymax = np.max(model_flux)
+
+        for i in range(len(self.show_line_labels)):
+            idx = self.model_line_labels.get(self.show_line_labels[i])
+            plt.plot([0.1 + i, 0.9 + i],
+                     [self.calc_post.detection_flux_values[idx], self.calc_post.detection_flux_values[idx]], c='k')
+            plt.plot([0.1 + i, 0.1 + i], [self.calc_post.detection_flux_values[idx] - self.calc_post.detection_flux_errors[idx],
+                                          self.calc_post.detection_flux_values[idx] + self.calc_post.detection_flux_errors[idx]], c='k')
+            plt.plot([0.9 + i, 0.9 + i], [self.calc_post.detection_flux_values[idx] - self.calc_post.detection_flux_errors[idx],
+                                          self.calc_post.detection_flux_values[idx] + self.calc_post.detection_flux_errors[idx]], c='k')
+
+        for i in range(len(self.show_line_labels)):
+            idx = self.model_line_labels.get(self.show_line_labels[i])
+            plt.plot([0.1 + i, 0.9 + i],
+                     [self.calc_post.uplim_flux_values[idx], self.calc_post.uplim_flux_values[idx]], c='grey')
+            plt.plot([0.1 + i, 0.1 + i], [-999.,
+                                          self.calc_post.uplim_flux_values[idx]], c='grey')
+            plt.plot([0.9 + i, 0.9 + i], [-999.,
+                                          self.calc_post.uplim_flux_values[idx]], c='grey')
+
+        plt.xlim(0., len(self.show_line_labels))
+        plt.ylim(ymin, ymax)
+        plt.yscale('log')
+
+        plt.ylabel('Modelled flux and measured flux')
+        plt.xticks(np.arange(len(self.show_line_labels)) + 0.5, labels=self.show_line_labels, fontsize=8, rotation='vertical')
+        plt.show()
+        #fig.colorbar(pos, label=axis_labels[par_c_bar])
+
+        if self.save:
+            plt.savefig(self.savename)
+        else:
+            plt.show()
+
