@@ -6,5 +6,6 @@ setuptools.setup(
     author="Dirk Scholte",
     author_email="dirk.scholte.20@ucl.ac.uk",
     description="Python package to fit data to modelled emission lines.",
-    packages=["CGGridInference", "numpy", "scipy"]
+    packages=["CGGridInference"],
+    install_requires=["numpy", "scipy"]
 )
