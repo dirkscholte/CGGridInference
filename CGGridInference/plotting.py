@@ -70,7 +70,7 @@ class CornerPlot:
                 ax1.tick_params(axis="x", direction="in")
                 ax1.tick_params(axis="y", direction="in")
 
-            if yi == 0:
+            if yi == 0 and xi != 0:
                 ax1 = plt.subplot(gs1[i])
                 ax1.set_ylabel(self.axis_labels[xi])
             else:
