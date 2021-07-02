@@ -11,9 +11,9 @@ class CalculatePosterior:
         self.detection_flux_errors = np.ma.masked_invalid(np.ones((len(self.model_line_labels)))*np.nan)
         self.uplim_flux_values = np.ma.masked_invalid(np.ones((len(self.model_line_labels)))*np.nan)
         self.uplim_flux_errors = np.ma.masked_invalid(np.ones((len(self.model_line_labels)))*np.nan)
-        self.prior = np.ones(self.model_flux_values.shape[-1]) / np.sum(np.ones(self.model_flux_values.shape[-1]))
-        self.likelihood = np.ones(self.model_flux_values.shape[-1]) * np.nan
-        self.posterior = np.ones(self.model_flux_values.shape[-1]) * np.nan
+        self.prior = np.ones(self.model_flux_values.shape[:-1]) / np.sum(np.ones(self.model_flux_values.shape[:-1]))
+        self.likelihood = np.ones(self.model_flux_values.shape[:-1]) * np.nan
+        self.posterior = np.ones(self.model_flux_values.shape[:-1]) * np.nan
 
     def reset_likelihood(self):
         self.detection_flux_values = np.ma.masked_invalid(np.ones((len(self.model_line_labels))) * np.nan)
@@ -22,11 +22,6 @@ class CalculatePosterior:
         self.uplim_flux_errors = np.ma.masked_invalid(np.ones((len(self.model_line_labels))) * np.nan)
         self.likelihood = np.ones(self.model_flux_values.shape[-1]) * np.nan
         self.posterior = np.ones(self.model_flux_values.shape[-1]) * np.nan
-
-    def reshape_dims(self, dims, dim):
-        dim_array = np.ones((1, dims), int).ravel()
-        dim_array[dim] = -1
-        return dim_array
 
     def input_data(self, data_flux_values, data_flux_errors, data_line_labels):
         for i in range(len(data_line_labels)):
@@ -40,19 +35,19 @@ class CalculatePosterior:
 
 
     def normalize_model(self, line_label):
-        self.model_flux_values = self.model_flux_values / np.take(self.model_flux_values, self.model_line_labels.get(line_label), axis=-1).reshape(self.reshape_dims(self.model_flux_values.ndim, range(self.model_flux_values.ndim-1)))
+        self.model_flux_values = self.model_flux_values / np.expand_dims(np.take(self.model_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
 
     def normalize_data(self, line_label):
-        self.uplim_flux_errors = self.uplim_flux_errors / np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1).reshape(self.reshape_dims(self.detection_flux_values.ndim, range(self.detection_flux_values.ndim - 1)))
-        self.uplim_flux_values = self.uplim_flux_values / np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1).reshape(self.reshape_dims(self.detection_flux_values.ndim, range(self.detection_flux_values.ndim - 1)))
-        self.detection_flux_errors = self.detection_flux_errors / np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1).reshape(self.reshape_dims(self.detection_flux_values.ndim, range(self.detection_flux_values.ndim-1)))
-        self.detection_flux_values = self.detection_flux_values / np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1).reshape(self.reshape_dims(self.detection_flux_values.ndim, range(self.detection_flux_values.ndim-1)))
+        self.uplim_flux_errors = self.uplim_flux_errors / np.expand_dims(np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
+        self.uplim_flux_values = self.uplim_flux_values / np.expand_dims(np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
+        self.detection_flux_errors = self.detection_flux_errors / np.expand_dims(np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
+        self.detection_flux_values = self.detection_flux_values / np.expand_dims(np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
 
     def calculate_likelihood(self):
         def calc_lnlikelihood_detections(model, data, data_errors):
             return -0.5 * np.sum( ((data - model) / data_errors)**2, axis=-1)
         def calc_lnlikelihood_uplims(model, data, data_errors):
-            return np.sum( -np.log(2) + np.log( erf( (data - model) / data_errors) ), axis=-1)
+            return np.sum(np.log(0.5 * (erf( (data - model) / data_errors)) + 1), axis=-1)
 
         lnlikelihood_detections = calc_lnlikelihood_detections(self.model_flux_values,
                                                                self.detection_flux_values,
