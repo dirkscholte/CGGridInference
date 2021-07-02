@@ -87,7 +87,7 @@ class CornerPlot:
             plt.show()
 
 class LineFitPlot:
-    def __init__(self, parameter_values, parameter_labels, model_flux_values, model_line_labels, data_flux_values, data_flux_errors, data_line_labels, show_line_labels, normalize_label, save=False, savename='cornerplot.pdf'):
+    def __init__(self, parameter_values, parameter_labels, model_flux_values, model_line_labels, data_flux_values, data_flux_errors, data_line_labels, show_line_labels, normalize_label, parameter_colorbar=0, save=False, savename='cornerplot.pdf'):
         self.parameter_values = parameter_values
         self.n_parameters = len(parameter_values.shape) - 1
         self.parameter_labels = parameter_labels
@@ -98,6 +98,7 @@ class LineFitPlot:
         self.data_line_labels = data_line_labels
         self.show_line_labels = show_line_labels
         self.normalize_label = normalize_label
+        self.parameter_colorbar = parameter_colorbar
         self.save = save
         self.savename = savename
 
@@ -115,15 +116,16 @@ class LineFitPlot:
         fig, ax = plt.subplots(figsize=(10, 6))
 
         for i in range(len(self.show_line_labels)):
-            model_flux = np.take(self.calc_post.model_flux_values, self.model_line_labels.get(self.show_line_labels[i]), axis=-1)
+            model_flux = np.take(self.calc_post.model_flux_values, self.model_line_labels.get(self.show_line_labels[i]), axis=-1).reshape(-1)
+            colorbar_values = np.take(self.marg.parameter_values, self.marg.get_parameter_index(self.parameter_colorbar), axis=-1).reshape(-1)
             pos = ax.scatter(np.random.uniform(low=0.1, high=0.9, size=model_flux.shape) + i,
                              model_flux,
                              alpha=0.4,
                              s=1000 * self.posterior.reshape(-1) / np.max(self.posterior.reshape(-1)) + 0.3,
-                             c='blue',
+                             c=colorbar_values,
                              edgecolor='none',
-                             #vmin=np.min(cbar_vals),
-                             #vmax=np.max(cbar_vals),
+                             vmin=np.min(colorbar_values),
+                             vmax=np.max(colorbar_values),
                              cmap='turbo')
             if i == 0:
                 ymin = np.min(model_flux)
@@ -157,8 +159,7 @@ class LineFitPlot:
 
         plt.ylabel('Modelled flux and measured flux')
         plt.xticks(np.arange(len(self.show_line_labels)) + 0.5, labels=self.show_line_labels, fontsize=8, rotation='vertical')
-        plt.show()
-        #fig.colorbar(pos, label=axis_labels[par_c_bar])
+        fig.colorbar(pos, label=self.parameter_colorbar)
 
         if self.save:
             plt.savefig(self.savename)
