@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from calculate_posterior import CalculatePosterior
-from marginalize import Marginalize
+from CGGridInference.calculate_posterior import CalculatePosterior
+from CGGridInference.marginalize import Marginalize
 
 class CornerPlot:
     def __init__(self,  parameter_values, parameter_labels, prob_dist, save=False, savename='cornerplot.pdf'):
