@@ -35,7 +35,11 @@ class CalculatePosterior:
 
 
     def normalize_model(self, line_label):
-        self.model_flux_values = self.model_flux_values / np.expand_dims(np.take(self.model_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
+        if line_label == 'detections_weighted_mean':
+            scaling_factor = np.expand_dims(np.average(np.expand_dims(self.detection_flux_values, axis=0) / self.model_flux_values, weights=1 / (self.detection_flux_errors**2/self.detection_flux_values**2), axis=-1), axis=-1)
+            self.model_flux_values = self.model_flux_values * scaling_factor
+        else:
+            self.model_flux_values = self.model_flux_values / np.expand_dims(np.take(self.model_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
 
     def normalize_data(self, line_label):
         self.uplim_flux_errors = self.uplim_flux_errors / np.expand_dims(np.take(self.detection_flux_values, self.model_line_labels.get(line_label), axis=-1), axis=-1)
