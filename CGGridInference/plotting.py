@@ -87,7 +87,7 @@ class CornerPlot:
             plt.show()
 
 class LineFitPlot:
-    def __init__(self, parameter_values, parameter_labels, model_flux_values, model_line_labels, data_flux_values, data_flux_errors, data_line_labels, show_line_labels, normalize_label, parameter_colorbar=0, save=False, savename='cornerplot.pdf'):
+    def __init__(self, parameter_values, parameter_labels, model_flux_values, model_line_labels, data_flux_values, data_flux_errors, data_line_labels, show_line_labels, normalize_label, normalize_model_weighted_mean=False, parameter_colorbar=0, figsize=(10,6), ylims=None, save=False, savename='cornerplot.pdf'):
         self.parameter_values = parameter_values
         self.n_parameters = len(parameter_values.shape) - 1
         self.parameter_labels = parameter_labels
@@ -98,7 +98,10 @@ class LineFitPlot:
         self.data_line_labels = data_line_labels
         self.show_line_labels = show_line_labels
         self.normalize_label = normalize_label
+        self.normalize_model_weighted_mean = normalize_model_weighted_mean
         self.parameter_colorbar = parameter_colorbar
+        self.figsize = figsize
+        self.ylims = ylims
         self.save = save
         self.savename = savename
 
@@ -106,6 +109,8 @@ class LineFitPlot:
         self.calc_post.normalize_model(self.normalize_label)
         self.calc_post.input_data(self.data_flux_values, self.data_flux_errors, self.data_line_labels)
         self.calc_post.normalize_data(self.normalize_label)
+        if self.normalize_model_weighted_mean:
+            self.calc_post.normalize_model('detections_weighted_mean')
         self.calc_post.calculate_likelihood()
         self.calc_post.calculate_posterior()
         self.posterior = self.calc_post.posterior
@@ -113,16 +118,17 @@ class LineFitPlot:
         self.marg = Marginalize(self.parameter_values, self.parameter_labels, self.posterior)
 
     def plot(self):
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=self.figsize)
 
         for i in range(len(self.show_line_labels)):
             model_flux = np.take(self.calc_post.model_flux_values, self.model_line_labels.get(self.show_line_labels[i]), axis=-1).reshape(-1)
             colorbar_values = np.take(self.marg.parameter_values, self.marg.get_parameter_index(self.parameter_colorbar), axis=-1).reshape(-1)
+            prob_sort = self.posterior.reshape(-1).argsort()
             pos = ax.scatter(np.random.uniform(low=0.1, high=0.9, size=model_flux.shape) + i,
-                             model_flux,
+                             model_flux.reshape(-1)[prob_sort[::1]],
                              alpha=0.4,
-                             s=1000 * self.posterior.reshape(-1) / np.max(self.posterior.reshape(-1)) + 0.3,
-                             c=colorbar_values,
+                             s=1000 * self.posterior.reshape(-1)[prob_sort[::1]] / np.max(self.posterior.reshape(-1)) + 0.3,
+                             c=colorbar_values[prob_sort[::1]],
                              edgecolor='none',
                              vmin=np.min(colorbar_values),
                              vmax=np.max(colorbar_values),
@@ -154,7 +160,11 @@ class LineFitPlot:
                                           self.calc_post.uplim_flux_values[idx]], c='grey')
 
         plt.xlim(0., len(self.show_line_labels))
-        plt.ylim(ymin, ymax)
+        if self.ylims==None:
+            plt.ylim(ymin, ymax)
+        else:
+            ymin, ymax = self.ylims
+            plt.ylim(ymin, ymax)
         plt.yscale('log')
 
         plt.ylabel('Modelled flux and measured flux')
