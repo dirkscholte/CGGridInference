@@ -70,4 +70,4 @@ class Marginalize:
 
     def derived_parameter_percentile(self, derived_parameter_values, bin_edges, percentile):
         marginalized = self.marginalize_derived_parameter(derived_parameter_values, bin_edges)
-        return self.histogram_cdf_inverse(percentile, marginalized, bin_edges)
+        return self.histogram_cdf_inverse(percentile/100., marginalized, bin_edges)
